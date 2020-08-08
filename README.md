@@ -1,0 +1,1 @@
+# Pomiar-podatnosci-magnetycznej-metoda-zmiennopradowa
