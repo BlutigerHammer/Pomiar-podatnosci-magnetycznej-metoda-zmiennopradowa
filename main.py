@@ -1,6 +1,5 @@
 import serial
 import time
-import find_com
 import pyvisa
 
 rm = pyvisa.ResourceManager()
@@ -15,7 +14,7 @@ time.sleep(2)
 
 voltmeter.write(b'P 0.0 \r')
 
-with open ('dane.txt', 'w') as f:
+with open ('data\\dane.txt', 'w') as f:
     f.write('Temp:\tU:\n')
     for i in range(5):
         print(i)
