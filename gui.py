@@ -3,7 +3,6 @@ from pyqtgraph import PlotWidget, plot
 import pyqtgraph as pg
 import sys  
 import os
-from random import randint
 
 import fake_meters 
 
@@ -12,15 +11,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
-        uic.loadUi('gui.ui', self)
+        uic.loadUi('gui-pl.ui', self)
         
         self.x = []  
         self.y = []
         self.i = 0
         self.data = None
-
-        self.PlotWidget.setBackground('w')
-        self.data_line = self.PlotWidget.plot(self.x, self.y, symbol='o', symbolSize=5, symbolBrush='k', symbolPen=None, pen=None)
 
         self.startButton.clicked.connect(self.startButton_clicked)
         self.stopButton.clicked.connect(self.stopButton_clicked)
@@ -29,6 +25,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def plot_data_init(self):
+        self.plotWidget.setBackground('w')
+        self.data_line = self.plotWidget.plot(self.x, self.y, symbol='o', symbolSize=5, symbolBrush='k', symbolPen=None, pen=None)
+
         self.timer = QtCore.QTimer()
         self.timer.setInterval(5)
         self.timer.timeout.connect(self.update_plot_data)

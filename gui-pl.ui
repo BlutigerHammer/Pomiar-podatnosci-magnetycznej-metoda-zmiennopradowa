@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="PlotWidget" name="PlotWidget" native="true">
+  <widget class="PlotWidget" name="plotWidget" native="true">
    <property name="geometry">
     <rect>
      <x>400</x>
@@ -128,7 +128,7 @@
    <property name="title">
     <string>Tryb</string>
    </property>
-   <widget class="QRadioButton" name="radioButton_3">
+   <widget class="QRadioButton" name="measurement">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -141,7 +141,7 @@
      <string>Pomiar</string>
     </property>
    </widget>
-   <widget class="QRadioButton" name="radioButton_2">
+   <widget class="QRadioButton" name="phaseSetting">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -154,7 +154,7 @@
      <string>Ustawienie fazy</string>
     </property>
    </widget>
-   <widget class="QRadioButton" name="radioButton">
+   <widget class="QRadioButton" name="sampleSetting">
     <property name="geometry">
      <rect>
       <x>10</x>
