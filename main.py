@@ -4,7 +4,7 @@ import pyvisa
 
 rm = pyvisa.ResourceManager()
 rm.list_resources()
-('ASRL1::INSTR', 'ASRL2::INSTR', 'GPIB0::12::INSTR')
+# ('ASRL1::INSTR', 'ASRL2::INSTR', 'GPIB0::12::INSTR')
 thermometer = rm.open_resource('USB0::0x164E::0x0DAD::TW00020217::INSTR')
 # print(thermometer.query("*IDN?"))
 
@@ -14,12 +14,14 @@ time.sleep(2)
 
 voltmeter.write(b'P 0.0 \r')
 
+
 def sample_setting():
-    with open ('data\\sample_setting.txt', 'w') as f:
+    with open('data\\sample_setting.txt', 'w') as f:
         f.write('Position\tU:\n')
         for i in range(0, 100):
             position = 0
-            #there will be connection with function which controls servo
+            # there will be connection with function which controls servo
+            position = str(position)
             position += '\t'
             print('position:', position)
             f.write(position)
@@ -28,14 +30,16 @@ def sample_setting():
             u = voltmeter.readline().decode()
             u += '\n'
             print('U', u)
-            f.write(u)    
+            f.write(u)
+    f.close()
+
 
 def phase_setting():
-    with open ('data\\phase.txt', 'w') as f:
+    with open('data\\phase.txt', 'w') as f:
         f.write('Phase[deg]\tU:\n')
         for i in range(0, 181):
             voltmeter.write(bytes(f"P {i} \r", encoding='utf8'))
-            phase = i + '\t'
+            phase = str(i) + '\t'
             print('phase:', phase)
             f.write(phase)
             
@@ -43,11 +47,12 @@ def phase_setting():
             u = voltmeter.readline().decode()
             u += '\n'
             print('U', u)
-            f.write(u)         
+            f.write(u)
+    f.close()
 
 
 def measurement():
-    with open ('data\\measurement.txt', 'w') as f:
+    with open('data\\measurement.txt', 'w') as f:
         f.write('Temp:\tU:\n')
         for i in range(5*60):
             print(i)
@@ -64,9 +69,8 @@ def measurement():
             u += '\n'
             print('U', u)
             f.write(u)
+    f.close()
 
 
-
-f.close()
 serial.Serial.close(voltmeter)
 thermometer.close()
