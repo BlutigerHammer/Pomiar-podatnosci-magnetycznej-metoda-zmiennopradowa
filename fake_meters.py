@@ -8,8 +8,7 @@ def prep(path):
     return temp, u
 
 
-def data_generator(i):
-    path = "data\\dane4.txt"
+def data_generator(i, path):
     x, y = prep(path)
     if i <= len(x) - 2:
         return [x[i], y[i]]
