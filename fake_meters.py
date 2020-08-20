@@ -8,9 +8,9 @@ def prep(path):
     return temp, u
 
 
-def data_generator(i, path):
+def data_generator(index, path):
     x, y = prep(path)
-    if i <= len(x) - 2:
-        return [x[i], y[i]]
+    if index < len(x):
+        return [x[index], y[index]]
     else:
         return False

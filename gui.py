@@ -1,4 +1,5 @@
 from PyQt5 import QtWidgets, QtCore, uic
+from pathlib import Path
 import sys  
 
 
@@ -10,7 +11,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         uic.loadUi('gui-pl.ui', self)
-        
+        self.setWindowTitle('Pomiar podatnosci magnetycznej metodą zmiennopradową')
+
         self.x = []  
         self.y = []
         self.i = 0
@@ -18,6 +20,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.path = None
 
         self.plotWidget.setBackground('w')
+
         self.data_line = self.plotWidget.plot(self.x, self.y, symbol='o', symbolSize=5, symbolBrush='k', symbolPen=None,
                                               pen=None)
 
@@ -30,17 +33,26 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sampleSetting.clicked.connect(self.sampleSetting_clicked)
         self.measurement.clicked.connect(self.measurement_clicked)
 
-    def phaseSetting_clicked(self):
-        self.path = "data\\phase.txt"
-        self.startButton.setEnabled(True)
-
     def sampleSetting_clicked(self):
-        self.path = "data\\sample_setting.txt"
+        self.path = Path("data/sample_setting.txt")
         self.startButton.setEnabled(True)
+        self.plotWidget.setTitle("Ustawienie próbki", color='k')
+        self.plotWidget.setLabel('left', 'Napięcie [V]')
+        self.plotWidget.setLabel('bottom', 'Położenie')
+
+    def phaseSetting_clicked(self):
+        self.path = Path("data/phase.txt")
+        self.startButton.setEnabled(True)
+        self.plotWidget.setTitle("Ustawienie fazy", color='k')
+        self.plotWidget.setLabel('left', 'Napięcie [V]')
+        self.plotWidget.setLabel('bottom', 'Faza [°]')
 
     def measurement_clicked(self):
-        self.path = "data\\measurement.txt"
+        self.path = Path("data/measurement.txt")
         self.startButton.setEnabled(True)
+        self.plotWidget.setTitle("Pomiar", color='k')
+        self.plotWidget.setLabel('left', 'Napięcie [V]')
+        self.plotWidget.setLabel('bottom', 'Temperatura [V]')
 
     def update_plot_data(self):
         self.data = fake_meters.data_generator(self.i, self.path)
@@ -68,6 +80,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.measurement.setEnabled(True)
         self.sampleSetting.setEnabled(True)
         self.phaseSetting.setEnabled(True)
+        self.x = []
+        self.y = []
+        self.i = 0
+        self.timer.timeout.disconnect(self.update_plot_data)
 
 
 app = QtWidgets.QApplication(sys.argv)
