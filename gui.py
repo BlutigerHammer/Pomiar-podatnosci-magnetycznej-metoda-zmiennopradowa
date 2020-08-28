@@ -2,6 +2,8 @@ from PyQt5 import QtWidgets, QtCore, uic
 from pathlib import Path
 import sys
 from main import Aparature
+import save_to
+from time import sleep
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -11,11 +13,13 @@ class MainWindow(QtWidgets.QMainWindow):
         uic.loadUi('gui-pl.ui', self)
         self.setWindowTitle('Pomiar podatnosci magnetycznej metodą zmiennopradową')
 
-        self.x = []  
+        self.x = []
         self.y = []
-        self.i = 0
         self.data = None
-        self.mode = 0
+        self.folder_name = None
+        self.file_name = 0
+        self.phase = 0
+        self.data_function = None
 
         self.plotWidget.setBackground('w')
 
@@ -32,42 +36,59 @@ class MainWindow(QtWidgets.QMainWindow):
         self.measurement.clicked.connect(self.measurement_clicked)
 
         self.Meters = Aparature()
+        self.data_function = self.Meters.measurement()
+        save_to.create_xmls(Path('data/excel-28-08-20.xlsx'))
+
+    def sample_setting_plot(self):
+        self.data = self.Meters.sample_setting()
+        if self.data is not None:
+            self.x.append(self.data[0])
+            self.y.append(self.data[1])
+            self.data_line.setData(self.x, self.y)  # Update the data.
+
+    def phase_setting_plot(self):
+        self.phase = 90
+        self.Meters.voltmeter.write(bytes(f"P {self.phase} \r", encoding='utf8'))
+        sleep(5)
+        for i in range(90, 100):
+            self.data = self.Meters.phase_setting(i)
+            if self.data is not None:
+                self.x.append(self.data[0])
+                self.y.append(self.data[1])
+                self.data_line.setData(self.x, self.y)  # Update the data.
+        self.phase = self.x[self.y.index(max(self.y))]
+        print(self.phase)
+        self.stopButton_clicked(False)
+
+    def measurement_plot(self):
+        self.data = self.Meters.measurement()
+        if self.data is not None:
+            # print(self.data)
+            self.x.append(self.data[0])
+            self.y.append(self.data[1])
+            self.data_line.setData(self.x, self.y)  # Update the data.
 
     def sampleSetting_clicked(self):
-        self.mode = 1
+        self.data_function = self.sample_setting_plot
         self.startButton.setEnabled(True)
         self.plotWidget.setTitle("Ustawienie próbki", color='k')
         self.plotWidget.setLabel('left', 'Napięcie [V]')
         self.plotWidget.setLabel('bottom', 'Położenie')
 
     def phaseSetting_clicked(self):
-        self.mode = 2
+        self.data_function = self.phase_setting_plot
         self.startButton.setEnabled(True)
         self.plotWidget.setTitle("Ustawienie fazy", color='k')
         self.plotWidget.setLabel('left', 'Napięcie [V]')
         self.plotWidget.setLabel('bottom', 'Faza [°]')
 
     def measurement_clicked(self):
-        self.mode = 3
-        self.path = Path("data/measurement.txt")
+        self.data_function = self.measurement_plot
         self.startButton.setEnabled(True)
         self.plotWidget.setTitle("Pomiar", color='k')
         self.plotWidget.setLabel('left', 'Napięcie [V]')
-        self.plotWidget.setLabel('bottom', 'Temperatura [V]')
-
-    def update_plot_data(self):
-        if self.mode == 1:
-            self.data = self.Meters.sample_setting(self.i)
-        if self.mode == 2:
-            self.data = self.Meters.phase_setting(self.i)
-        if self.mode == 3:
-            self.data = self.Meters.measurement()
-
-        if self.data is not False:
-            self.x.append(self.data[0])
-            self.y.append(self.data[1])
-            self.data_line.setData(self.x, self.y)  # Update the data.
-            self.i += 1
+        self.plotWidget.setLabel('bottom', 'Temperatura [K]')
+        self.Meters.voltmeter.write(bytes(f"P {-self.phase} \r", encoding='utf8'))
 
 
     def startButton_clicked(self):
@@ -78,20 +99,33 @@ class MainWindow(QtWidgets.QMainWindow):
         self.phaseSetting.setEnabled(False)
 
         self.timer = QtCore.QTimer()
-        self.timer.setInterval(1)
-        self.timer.timeout.connect(self.update_plot_data)
+        self.timer.setInterval(100)
+
+        self.timer.timeout.connect(self.data_function)
         self.timer.start()
 
-    def stopButton_clicked(self):
+
+    def stopButton_clicked(self, save=True):
         self.stopButton.setEnabled(False)
+        self.timer.timeout.disconnect(self.data_function)
         self.startButton.setEnabled(True)
         self.measurement.setEnabled(True)
         self.sampleSetting.setEnabled(True)
         self.phaseSetting.setEnabled(True)
+
+        self.save_data()
+        self.file_name += 1
         self.x = []
         self.y = []
-        self.i = 0
-        self.timer.timeout.disconnect(self.update_plot_data)
+
+
+    def save_data(self):
+        path = Path('data/excel-28-08-20.xlsx')
+        sheet_name = 'a' + str(self.file_name)
+        save_to.save_to_xmls(path, self.x, self.y, sheet_name)
+        path = Path(f'data/data-28-08-20_{self.file_name}.csv')
+        save_to.save_to_csv(path, self.x, self.y)
+
 
 
 app = QtWidgets.QApplication(sys.argv)
