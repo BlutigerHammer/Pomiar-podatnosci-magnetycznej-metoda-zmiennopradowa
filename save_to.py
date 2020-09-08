@@ -2,29 +2,23 @@ import pandas as pd
 from pathlib import Path
 
 
-def save_to_xmls(path, data1, data2, sheet_name):
-    str1 = 'pos'
-    str2 = 'volt'
-    df = pd.DataFrame({str1: data1, str2: data2})
-    df.index += 1
+def save_to_csv(path, parameters, x, y):
+    # print(data)
+    str1 = parameters.get('wartości x')
+    str2 = parameters.get('wartości y')
+    parameters = pd.DataFrame.from_dict(parameters, orient="index")
+    parameters = parameters.transpose()
+    parameters.to_csv(path_or_buf=path, index=False, sep='\t', mode='w')
+    df = pd.DataFrame({str1: x, str2: y})
+    df.to_csv(path_or_buf=path, index=False, sep='\t', mode='a')
 
-    writer = pd.ExcelWriter(path=path, engine="openpyxl", mode='a')
-    df.to_excel(writer, sheet_name=sheet_name)
+def csv_to_xlsx(excel_path, csv_paths):
+    writer = pd.ExcelWriter(excel_path, engine='xlsxwriter')
+    for i in range(len(csv_paths)):
+        df = pd.read_csv(csv_paths[i], sep='\t')
+        sheet_name = Path(csv_paths[i]).stem
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
     writer.save()
-
-def create_xmls(path):
-    sheet_name = 'setup'
-    writer = pd.ExcelWriter(path=path, engine="openpyxl", mode='w')
-    df = pd.DataFrame({'Witaj'})
-    df.to_excel(writer, sheet_name=sheet_name)
-    writer.save()
-
-
-def save_to_csv(path, data1, data2):
-    str1 = 'pos'
-    str2 = 'volt'
-    df = pd.DataFrame({str1: data1, str2: data2})
-    df.to_csv(path_or_buf=path, index=False, sep='\t')
 
 
 if __name__ == '__main__':

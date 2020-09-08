@@ -6,8 +6,10 @@ import save_to
 from time import sleep
 
 
+BACKGROUND_MAGNETISM = 1.45e-5
+
+
 class MainWindow(QtWidgets.QMainWindow):
-    BACKGROUND_MAGNETISM = 1.45e-5
 
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
@@ -16,12 +18,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.x = []
         self.y = []
+        self.csv_paths = []
         self.data = None
         self.phase = -90
         self.data_function = None
 
         self.plotWidget.setBackground('w')
-
 
         self.data_line = self.plotWidget.plot(self.x, self.y, symbol='o', symbolSize=5, symbolBrush='k', symbolPen=None,
                                               pen=None)
@@ -37,7 +39,21 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.Meters = Aparature()
         self.data_function = self.Meters.measurement()
-        # save_to.create_xmls(Path('data/excel-31-08-20.xlsx'))
+
+    def closeEvent(self, event):
+        result = QtGui.QMessageBox.question(self,
+                                            "Zamknij program",
+                                            "Czy zamknąć program? \
+                                            \nCzy, przed zamknięciem, zapisać wszystkie dane z pomiarów do pliku Excel (.xlsx) ? ",
+                                            QtGui.QMessageBox.Cancel | QtGui.QMessageBox.Close | QtGui.QMessageBox.Save)
+
+        if result == QtGui.QMessageBox.Cancel:
+            event.ignore()
+        elif result == QtGui.QMessageBox.Close:
+            event.accept()
+        elif result == QtGui.QMessageBox.Save:
+            path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "", "", "Excel Files (*.xlsx)")
+            save_to.csv_to_xmls(path, self.csv_paths)
 
     def sample_setting_plot(self):
         self.data = self.Meters.sample_setting()
@@ -46,11 +62,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.y.append(self.data[1] - BACKGROUND_MAGNETISM)
             self.data_line.setData(self.x, self.y)  # Update the data.
 
-
     def phase_setting_plot(self):
         self.phase = - 90
         self.Meters.voltmeter.write(bytes(f"P {self.phase} \r", encoding='utf8'))
-        sleep(5)
+        # sleep(5)
         for phase in range(90, 100):
             self.data = self.Meters.phase_setting(-phase)
             if self.data is not None:
@@ -64,13 +79,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def measurement_plot(self):
         self.data = self.Meters.measurement()
         if self.data is not None:
-            # print(self.data)
             self.x.append(self.data[0])
             self.y.append(self.data[1] - BACKGROUND_MAGNETISM)
             self.data_line.setData(self.x, self.y)  # Update the data.
             self.xValue.setText(str(round(self.data[0], 1)))
             self.yValue.setText(str(self.data[1]))
-
 
     def sampleSetting_clicked(self):
         self.data_function = self.sample_setting_plot
@@ -120,16 +133,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.phaseSetting.setEnabled(True)
 
         self.save_data()
-        self.file_name += 1
         self.x = []
         self.y = []
 
     def save_data(self):
-        # path = Path('data/excel-31-08-20.xlsx')
-        # sheet_name = 'a' + str(self.file_name)
-        # save_to.save_to_xmls(path, self.x, self.y, sheet_name)
         path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "", "", "CSV Files (*.csv) ;;Text Files (*.txt)")
-        save_to.save_to_csv(path, self.x, self.y)
+        parameters = {'magnetyzm tła': BACKGROUND_MAGNETISM, 'faza': self.phase, 'położenie próbki': 'nodata',
+                      'czułość': 'no data', 'wartości x': self.xLabel.text(), 'wartości y': self.yLabel.text()}
+        save_to.save_to_csv(path, parameters, self.x, self.y)
+        self.csv_paths.append(path)
 
 
 app = QtWidgets.QApplication(sys.argv)
