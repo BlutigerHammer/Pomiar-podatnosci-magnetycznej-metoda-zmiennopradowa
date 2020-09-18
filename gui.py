@@ -1,12 +1,12 @@
-from PyQt5 import QtWidgets, QtCore, uic, QtGui
-from pathlib import Path
+from PyQt5 import QtWidgets, QtCore, uic
+
 import sys
 from main import Aparature
 import save_to
 from time import sleep
 
-
 BACKGROUND_MAGNETISM = 1.45e-5
+MAX_POSITION = 200
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -19,12 +19,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.x = []
         self.y = []
         self.csv_paths = []
-        self.data = None
         self.phase = -90
+        self.position = 0
         self.data_function = None
 
         self.plotWidget.setBackground('w')
-
         self.data_line = self.plotWidget.plot(self.x, self.y, symbol='o', symbolSize=5, symbolBrush='k', symbolPen=None,
                                               pen=None)
 
@@ -38,52 +37,64 @@ class MainWindow(QtWidgets.QMainWindow):
         self.measurement.clicked.connect(self.measurement_clicked)
 
         self.Meters = Aparature()
-        self.data_function = self.Meters.measurement()
 
     def closeEvent(self, event):
-        result = QtGui.QMessageBox.question(self,
-                                            "Zamknij program",
-                                            "Czy zamknąć program? \
-                                            \nCzy, przed zamknięciem, zapisać wszystkie dane z pomiarów do pliku Excel (.xlsx) ? ",
-                                            QtGui.QMessageBox.Cancel | QtGui.QMessageBox.Close | QtGui.QMessageBox.Save)
+        result = QtWidgets.QMessageBox.question(self, "Zamknij program",
+                                                "Czy zapisać dane z pomiarów do pliku Excel (.xlsx)?",
+                                                QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.No |
+                                                QtWidgets.QMessageBox.Yes)
 
-        if result == QtGui.QMessageBox.Cancel:
+        if result == QtWidgets.QMessageBox.Cancel:
             event.ignore()
-        elif result == QtGui.QMessageBox.Close:
+        elif result == QtWidgets.QMessageBox.No:
             event.accept()
-        elif result == QtGui.QMessageBox.Save:
+        elif result == QtWidgets.QMessageBox.Yes:
             path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "", "", "Excel Files (*.xlsx)")
-            save_to.csv_to_xmls(path, self.csv_paths)
+            try:
+                save_to.csv_to_xlsx(path, self.csv_paths)
+            except:
+                event.ignore()
 
     def sample_setting_plot(self):
-        self.data = self.Meters.sample_setting()
-        if self.data is not None:
-            self.x.append(self.data[0])
-            self.y.append(self.data[1] - BACKGROUND_MAGNETISM)
-            self.data_line.setData(self.x, self.y)  # Update the data.
+        self.Meters.change_position(0, self.position)
+        for position in range(MAX_POSITION):
+            data = self.Meters.sample_setting(self.position)
+            try:
+                self.x.append(data[0])
+                self.y.append(data[1] - BACKGROUND_MAGNETISM)
+                self.data_line.setData(self.x, self.y)  # Update the data
+            except:
+                print('Error')
+            if self.x[-1] == self.x[-2]:
+                self.position = self.x[self.y.index(max(self.y))]
+                self.stopButton_clicked()
 
     def phase_setting_plot(self):
         self.phase = - 90
         self.Meters.voltmeter.write(bytes(f"P {self.phase} \r", encoding='utf8'))
-        # sleep(5)
+        sleep(2)
         for phase in range(90, 100):
-            self.data = self.Meters.phase_setting(-phase)
-            if self.data is not None:
-                self.x.append(self.data[0])
-                self.y.append(self.data[1] - BACKGROUND_MAGNETISM)
-                self.data_line.setData(self.x, self.y)  # Update the data.
+            data = self.Meters.phase_setting(-phase)
+            try:
+                self.x.append(data[0])
+                self.y.append(data[1] - BACKGROUND_MAGNETISM)
+                self.data_line.setData(self.x, self.y)  # Update the data
+            except:
+                print('Error')
         self.phase = self.x[self.y.index(max(self.y))]
         print(self.phase)
         self.stopButton_clicked()
 
     def measurement_plot(self):
-        self.data = self.Meters.measurement()
-        if self.data is not None:
-            self.x.append(self.data[0])
-            self.y.append(self.data[1] - BACKGROUND_MAGNETISM)
-            self.data_line.setData(self.x, self.y)  # Update the data.
-            self.xValue.setText(str(round(self.data[0], 1)))
-            self.yValue.setText(str(self.data[1]))
+        data = self.Meters.measurement()
+        try:
+            self.x.append(data[0])
+            self.y.append(data[1] - BACKGROUND_MAGNETISM)
+            self.data_line.setData(self.x, self.y)  # Update the data
+            self.xValue.setText(str(round(data[0], 1)))
+            self.yValue.setText(str(data[1]))
+        except:
+            print('Error')
 
     def sampleSetting_clicked(self):
         self.data_function = self.sample_setting_plot
@@ -140,11 +151,28 @@ class MainWindow(QtWidgets.QMainWindow):
         path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "", "", "CSV Files (*.csv) ;;Text Files (*.txt)")
         parameters = {'magnetyzm tła': BACKGROUND_MAGNETISM, 'faza': self.phase, 'położenie próbki': 'nodata',
                       'czułość': 'no data', 'wartości x': self.xLabel.text(), 'wartości y': self.yLabel.text()}
-        save_to.save_to_csv(path, parameters, self.x, self.y)
-        self.csv_paths.append(path)
+        try:
+            save_to.save_to_csv(path, parameters, self.x, self.y)
+            self.csv_paths.append(path)
+        except:
+            self.error_message()
+
+    def error_message(self):
+        msgBox = QtWidgets.QMessageBox()
+        msgBox.setIcon(QtWidgets.QMessageBox.Critical)
+        msgBox.setText("Nie udało się zapisać pliku, czy chcesz spróbować ponownie?")
+        msgBox.setWindowTitle("Błąd zapisu")
+        msgBox.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+        self.save_data()
 
 
 app = QtWidgets.QApplication(sys.argv)
+
+locale = QtCore.QLocale.system().name()
+qtTranslator = QtCore.QTranslator()
+if qtTranslator.load("qt_" + locale):
+    app.installTranslator(qtTranslator)
+
 w = MainWindow()
 w.show()
 sys.exit(app.exec_())
