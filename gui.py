@@ -5,8 +5,8 @@ from main import Aparature
 import save_to
 from time import sleep
 
-BACKGROUND_MAGNETISM = 1.45e-5
-MAX_POSITION = 200
+BACKGROUND = 1.45e-5
+MAX_POSITION = 72
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -19,7 +19,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.x = []
         self.y = []
         self.csv_paths = []
-        self.phase = -90
+        self.phase = -87
         self.position = 0
         self.data_function = None
 
@@ -47,6 +47,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if result == QtWidgets.QMessageBox.Cancel:
             event.ignore()
         elif result == QtWidgets.QMessageBox.No:
+            self.Meters.change_position(0, self.position)
             event.accept()
         elif result == QtWidgets.QMessageBox.Yes:
             path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "", "", "Excel Files (*.xlsx)")
@@ -54,47 +55,66 @@ class MainWindow(QtWidgets.QMainWindow):
                 save_to.csv_to_xlsx(path, self.csv_paths)
             except:
                 event.ignore()
+            self.Meters.change_position(0, self.position)
 
     def sample_setting_plot(self):
-        self.Meters.change_position(0, self.position)
+        x = self.Meters.change_position(0, self.position)
+        print(x)
+        sleep(8) #sleep(x*0.5)
         for position in range(MAX_POSITION):
-            data = self.Meters.sample_setting(self.position)
+            self.position = position
+            data = self.Meters.sample_setting(position)
             try:
-                self.x.append(data[0])
-                self.y.append(data[1] - BACKGROUND_MAGNETISM)
+                self.x.append(position)
+                self.y.append(data[1] - BACKGROUND)
                 self.data_line.setData(self.x, self.y)  # Update the data
+                QtCore.QCoreApplication.sendPostedEvents()
+                self.xValue.setText(str(data[0]))
+                self.yValue.setText(str(data[1]))
             except:
-                print('Error')
-            if self.x[-1] == self.x[-2]:
-                self.position = self.x[self.y.index(max(self.y))]
-                self.stopButton_clicked()
+                self.xValue.setText('ERROR')
+                self.yValue.setText('ERROR')
+
+        self.Meters.change_sensivity(self, max(self.y, key=abs))
+        self.position = self.x[self.y.index(max(self.y, key=abs))]
+        self.xValue.setText(str(self.position))
+        self.yValue.setText('')
+        self.Meters.change_position(0, MAX_POSITION - self.position)
+        self.stopButton_clicked()
 
     def phase_setting_plot(self):
-        self.phase = - 90
+        self.phase = - 87
         self.Meters.voltmeter.write(bytes(f"P {self.phase} \r", encoding='utf8'))
-        sleep(2)
-        for phase in range(90, 100):
+        sleep(5)
+        for phase in range(87, 97):
             data = self.Meters.phase_setting(-phase)
             try:
                 self.x.append(data[0])
-                self.y.append(data[1] - BACKGROUND_MAGNETISM)
+                self.y.append(data[1] - BACKGROUND)
                 self.data_line.setData(self.x, self.y)  # Update the data
+                QtCore.QCoreApplication.sendPostedEvents()
+                self.xValue.setText(str(data[0]))
+                self.yValue.setText(str(data[1]))
             except:
-                print('Error')
-        self.phase = self.x[self.y.index(max(self.y))]
-        print(self.phase)
+                self.xValue.setText('ERROR')
+                self.yValue.setText('ERROR')
+        self.phase = self.x[self.y.index(max(self.y, key=abs))]
+        self.xValue.setText(str(self.phase))
+        self.yValue.setText('')
+        self.Meters.voltmeter.write(bytes(f"P {self.phase} \r", encoding='utf8'))
         self.stopButton_clicked()
 
     def measurement_plot(self):
         data = self.Meters.measurement()
         try:
             self.x.append(data[0])
-            self.y.append(data[1] - BACKGROUND_MAGNETISM)
+            self.y.append(data[1] - BACKGROUND)
             self.data_line.setData(self.x, self.y)  # Update the data
             self.xValue.setText(str(round(data[0], 1)))
             self.yValue.setText(str(data[1]))
         except:
-            print('Error')
+            self.xValue.setText('ERROR')
+            self.yValue.setText('ERROR')
 
     def sampleSetting_clicked(self):
         self.data_function = self.sample_setting_plot
@@ -102,6 +122,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plotWidget.setTitle("Ustawienie próbki", color='k')
         self.plotWidget.setLabel('left', 'Napięcie [V]', color='k')
         self.plotWidget.setLabel('bottom', 'Położenie', color='k')
+        self.xLabel.setText('Położenie')
+        self.yLabel.setText('Napięcie [V]')
+        #self.plotWidget.clear()
 
     def phaseSetting_clicked(self):
         self.data_function = self.phase_setting_plot
@@ -111,6 +134,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plotWidget.setLabel('bottom', 'Faza [°]', color='k')
         self.xLabel.setText('Faza [°]')
         self.yLabel.setText('Napięcie [V]')
+        #self.plotWidget.clear()
 
     def measurement_clicked(self):
         self.data_function = self.measurement_plot
@@ -121,6 +145,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.Meters.voltmeter.write(bytes(f"P {-self.phase} \r", encoding='utf8'))
         self.xLabel.setText('Temperatura [K]')
         self.yLabel.setText('Napięcie [V]')
+        #self.plotWidget.clear()
 
     def startButton_clicked(self):
         self.startButton.setEnabled(False)
@@ -128,12 +153,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.measurement.setEnabled(False)
         self.sampleSetting.setEnabled(False)
         self.phaseSetting.setEnabled(False)
-
         self.timer = QtCore.QTimer()
         self.timer.setInterval(100)
 
         self.timer.timeout.connect(self.data_function)
         self.timer.start()
+
 
     def stopButton_clicked(self):
         self.stopButton.setEnabled(False)
@@ -149,7 +174,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def save_data(self):
         path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "", "", "CSV Files (*.csv) ;;Text Files (*.txt)")
-        parameters = {'magnetyzm tła': BACKGROUND_MAGNETISM, 'faza': self.phase, 'położenie próbki': 'nodata',
+        parameters = {'tło[V]': BACKGROUND, 'faza[°]': self.phase, 'położenie próbki': self.position,
                       'czułość': 'no data', 'wartości x': self.xLabel.text(), 'wartości y': self.yLabel.text()}
         try:
             save_to.save_to_csv(path, parameters, self.x, self.y)
