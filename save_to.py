@@ -5,6 +5,8 @@ from pathlib import Path
 def save_to_csv(path, parameters, x, y):
     str1 = parameters.get('wartości x')
     str2 = parameters.get('wartości y')
+    parameters.pop('wartości x')
+    parameters.pop('wartości y')
     parameters = pd.DataFrame.from_dict(parameters, orient="index")
     parameters = parameters.transpose()
     parameters.to_csv(path_or_buf=path, index=False, sep='\t', mode='w')

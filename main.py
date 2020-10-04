@@ -10,35 +10,36 @@ class Aparature:
     def __init__(self):
         try:
             rm = pyvisa.ResourceManager()
-            rm.list_resources()
+            print(rm.list_resources())
             self.thermometer = rm.open_resource('USB0::0x164E::0x0DAD::TW00020217::INSTR')
-        except pyvisa.VisaIOError:
-            print('Multimetr Picotest nie jest podłączony poprawnie')
+        except Exception:
+            raise Exception('thermometer is not connected properly\n')
 
         try:
             com = find_com.find_device('USB Serial Port')
             self.voltmeter = serial.Serial(com, baudrate=9600, timeout=1)
         except Exception:
-            print('Lock-in-Amplifier nie jest podłączony poprawnie')
-
+            raise Exception('voltmeter is not connected properly\n')
 
         try:
             com = find_com.find_device('CH340')
             self.arduino = serial.Serial(com, baudrate=9600, timeout=1)
         except Exception:
-            print('Arduino nie jest podłączone poprawnie')
+            raise Exception('arduino is not connected properly')
 
-        time.sleep(2)
-        self.voltmeter.write(b'P -87 \r')
-        self.voltmeter.write(b'G 15 \r')  #set sensivity to 500uV
+        else:
+            time.sleep(2)
+            self.voltmeter.write(b'P -87 \r')
+            self.voltmeter.write(b'G 15 \r')  # set sensivity to 500uV
+
 
     def sample_setting(self, position):
         if self.change_position(1, 1):
             position += 1
+        time.sleep(1.5)
         self.voltmeter.write(b' Q \r')
         voltage = self.voltmeter.readline().decode()
         voltage = float(voltage)
-        time.sleep(1)
         return [position, voltage]
 
     def phase_setting(self, phase):
@@ -57,20 +58,24 @@ class Aparature:
         return [temperature, voltage]
 
     def change_sensivity(self, voltage):
+        # if voltage == 0:
+        #     sensivity = 1
+        #     self.voltmeter.write(bytes(f"G {sensivity} \r", encoding='utf8'))
+        #     return sensivity
         order_of_magnitude = math.floor(math.log(voltage, 10))
-        x = (order_of_magnitude + 8)*3 + 1
-        first_digit = voltage/10**order_of_magnitude
+        sensivity = (order_of_magnitude + 8) * 3 + 1
+        first_digit = voltage / 10 ** order_of_magnitude
         if first_digit < 1:
-            x += 0
+            sensivity += 0
         elif first_digit < 2:
-            x += 1
+            sensivity += 1
         elif first_digit < 5:
-            x += 2
+            sensivity += 2
         else:
-            x += 3
-        self.voltmeter.write(bytes(f"G {x} \r", encoding='utf8'))
-
-
+            sensivity += 3
+        sensivity = min(sensivity, 24)
+        self.voltmeter.write(bytes(f"G {sensivity} \r", encoding='utf8'))
+        return sensivities[sensivity]
 
     def change_position(self, direction, distance):
         data_to_arduino = str(direction) + str(distance) + '\n'
@@ -95,8 +100,12 @@ class Aparature:
         msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
 
 
+sensivities = {1: '10nV', 2: '20nV', 3: '50nV', 4: '100nV', 5: '200nV', 6: '500nV', 7: '1uV', 8: '2uV', 9: '5uV',
+               10: '10uV', 11: '20uV', 12: '50uV', 13: '100uV', 14: '200uV', 15: '500uV', 16: '1mV', 17: '2mV',
+               18: '5mV', 19: '10V', 20: '20mV', 21: '50mV', 22: '100mV', 23: '200mV', 24: '500mV'}
+
+
 def volts_to_kelvins(x):
     x *= 1000  # volts to milivolts
     x += 1  # Cold Junction Compensation
     return 272.99294 + 25.83372 * x - 0.78202 * x ** 2 + 0.23669 * x ** 3 + 0.07095 * x ** 4 + 0.01113 * x ** 5
-

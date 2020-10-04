@@ -10,7 +10,6 @@ def find_device(name):
     comcomm_port = 'None'
     ports_found = get_ports()
     for port in ports_found:
-        print(port)
         str_port = str(port)
         
         if name in str_port:

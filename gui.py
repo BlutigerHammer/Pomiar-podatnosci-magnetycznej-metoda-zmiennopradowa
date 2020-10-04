@@ -21,6 +21,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.csv_paths = []
         self.phase = -87
         self.position = 0
+        self.sensivity = '500uV'
         self.data_function = None
 
         self.plotWidget.setBackground('w')
@@ -35,8 +36,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.phaseSetting.clicked.connect(self.phaseSetting_clicked)
         self.sampleSetting.clicked.connect(self.sampleSetting_clicked)
         self.measurement.clicked.connect(self.measurement_clicked)
+        try:
+            self.Meters = Aparature()
+        except Exception as e:
+            print(e)
 
-        self.Meters = Aparature()
 
     def closeEvent(self, event):
         result = QtWidgets.QMessageBox.question(self, "Zamknij program",
@@ -59,8 +63,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def sample_setting_plot(self):
         x = self.Meters.change_position(0, self.position)
-        print(x)
-        sleep(8) #sleep(x*0.5)
+        sleep(x*0.5)
         for position in range(MAX_POSITION):
             self.position = position
             data = self.Meters.sample_setting(position)
@@ -74,8 +77,8 @@ class MainWindow(QtWidgets.QMainWindow):
             except:
                 self.xValue.setText('ERROR')
                 self.yValue.setText('ERROR')
-
-        self.Meters.change_sensivity(self, max(self.y, key=abs))
+        self.sensivity = self.Meters.change_sensivity(abs(max(self.y, key=abs)))
+        print('sesn:', self.sensivity)
         self.position = self.x[self.y.index(max(self.y, key=abs))]
         self.xValue.setText(str(self.position))
         self.yValue.setText('')
@@ -83,10 +86,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stopButton_clicked()
 
     def phase_setting_plot(self):
-        self.phase = - 87
-        self.Meters.voltmeter.write(bytes(f"P {self.phase} \r", encoding='utf8'))
+        self.phase = - 80
         sleep(5)
-        for phase in range(87, 97):
+        for phase in range(80, 100):
             data = self.Meters.phase_setting(-phase)
             try:
                 self.x.append(data[0])
@@ -142,7 +144,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plotWidget.setTitle("Pomiar", color='k')
         self.plotWidget.setLabel('left', 'Napięcie [V]', color='k')
         self.plotWidget.setLabel('bottom', 'Temperatura [K]', color='k')
-        self.Meters.voltmeter.write(bytes(f"P {-self.phase} \r", encoding='utf8'))
         self.xLabel.setText('Temperatura [K]')
         self.yLabel.setText('Napięcie [V]')
         #self.plotWidget.clear()
@@ -175,11 +176,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def save_data(self):
         path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "", "", "CSV Files (*.csv) ;;Text Files (*.txt)")
         parameters = {'tło[V]': BACKGROUND, 'faza[°]': self.phase, 'położenie próbki': self.position,
-                      'czułość': 'no data', 'wartości x': self.xLabel.text(), 'wartości y': self.yLabel.text()}
+                      'czułość': self.sensivity, 'wartości x': self.xLabel.text(), 'wartości y': self.yLabel.text()}
         try:
             save_to.save_to_csv(path, parameters, self.x, self.y)
             self.csv_paths.append(path)
         except:
+            print("Error")
             self.error_message()
 
     def error_message(self):
