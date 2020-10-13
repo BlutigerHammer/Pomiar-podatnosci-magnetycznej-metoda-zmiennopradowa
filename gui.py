@@ -38,8 +38,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.measurement.clicked.connect(self.measurement_clicked)
         try:
             self.Meters = Aparature()
-        except Exception as e:
-            print(e)
+        except Exception as errors:
+            self.critical_message("Następujące urządzenia nie są podłączone poprawnie:\n" + str(errors) \
+                                  + "\nSprawdź połączenie USB")
 
 
     def closeEvent(self, event):
@@ -191,6 +192,13 @@ class MainWindow(QtWidgets.QMainWindow):
         msgBox.setWindowTitle("Błąd zapisu")
         msgBox.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
         self.save_data()
+
+    def critical_message(self, text):
+        msgBox = QtWidgets.QMessageBox()
+        msgBox.setIcon(QtWidgets.QMessageBox.Critical)
+        msgBox.setText(text)
+        msgBox.setWindowTitle("")
+        msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
 
 
 app = QtWidgets.QApplication(sys.argv)

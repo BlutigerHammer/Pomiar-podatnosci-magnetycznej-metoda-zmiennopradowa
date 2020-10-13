@@ -15,8 +15,8 @@ def find_device(name):
         if name in str_port:
             split_port = str_port.split(' ')
             comcomm_port = (split_port[0])
-    if comcomm_port == 'None':
-        print('port not found')
+    #if comcomm_port == 'None':
+        #print('port not found')
 
     return comcomm_port
             

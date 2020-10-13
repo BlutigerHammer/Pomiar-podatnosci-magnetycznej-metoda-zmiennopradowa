@@ -8,24 +8,28 @@ import math
 class Aparature:
 
     def __init__(self):
+        errors = []
         try:
             rm = pyvisa.ResourceManager()
-            print(rm.list_resources())
+            #print(rm.list_resources())
             self.thermometer = rm.open_resource('USB0::0x164E::0x0DAD::TW00020217::INSTR')
         except Exception:
-            raise Exception('thermometer is not connected properly\n')
+            errors.append('Multimetr M3500A')
 
         try:
             com = find_com.find_device('USB Serial Port')
             self.voltmeter = serial.Serial(com, baudrate=9600, timeout=1)
         except Exception:
-            raise Exception('voltmeter is not connected properly\n')
+            errors.append('Lock-in Amplifier SR510')
 
         try:
             com = find_com.find_device('CH340')
             self.arduino = serial.Serial(com, baudrate=9600, timeout=1)
         except Exception:
-            raise Exception('arduino is not connected properly')
+            errors.append('Płytka Arduino')
+
+        if errors:
+            raise Exception(f"{', '.join(errors)}")
 
         else:
             time.sleep(2)
@@ -92,12 +96,6 @@ class Aparature:
         except AttributeError:
             print("AttributeError")
 
-    def cricital_message(self, text):
-        msgBox = QtWidgets.QMessageBox()
-        msgBox.setIcon(QtWidgets.QMessageBox.Critical)
-        msgBox.setText(text)
-        msgBox.setWindowTitle("")
-        msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
 
 
 sensivities = {1: '10nV', 2: '20nV', 3: '50nV', 4: '100nV', 5: '200nV', 6: '500nV', 7: '1uV', 8: '2uV', 9: '5uV',
