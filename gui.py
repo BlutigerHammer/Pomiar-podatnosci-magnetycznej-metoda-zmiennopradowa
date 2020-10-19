@@ -39,9 +39,8 @@ class MainWindow(QtWidgets.QMainWindow):
         try:
             self.Meters = Aparature()
         except Exception as errors:
-            self.critical_message("Następujące urządzenia nie są podłączone poprawnie:\n" + str(errors) \
-                                  + "\nSprawdź połączenie USB")
-
+            self.critical_message("Następujące urządzenia nie są podłączone poprawnie:\n" + str(errors)
+                                  + "\nSprawdź połączenie USB i uruchom ponownie program")
 
     def closeEvent(self, event):
         result = QtWidgets.QMessageBox.question(self, "Zamknij program",
@@ -52,15 +51,21 @@ class MainWindow(QtWidgets.QMainWindow):
         if result == QtWidgets.QMessageBox.Cancel:
             event.ignore()
         elif result == QtWidgets.QMessageBox.No:
-            self.Meters.change_position(0, self.position)
+            try:
+                self.Meters.change_position(0, self.position)
+            except AttributeError:
+                pass
             event.accept()
         elif result == QtWidgets.QMessageBox.Yes:
             path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "", "", "Excel Files (*.xlsx)")
             try:
                 save_to.csv_to_xlsx(path, self.csv_paths)
-            except:
+            except Exception:
                 event.ignore()
-            self.Meters.change_position(0, self.position)
+            try:
+                self.Meters.change_position(0, self.position)
+            except AttributeError:
+                pass
 
     def sample_setting_plot(self):
         x = self.Meters.change_position(0, self.position)
@@ -127,7 +132,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plotWidget.setLabel('bottom', 'Położenie', color='k')
         self.xLabel.setText('Położenie')
         self.yLabel.setText('Napięcie [V]')
-        #self.plotWidget.clear()
 
     def phaseSetting_clicked(self):
         self.data_function = self.phase_setting_plot
@@ -137,7 +141,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plotWidget.setLabel('bottom', 'Faza [°]', color='k')
         self.xLabel.setText('Faza [°]')
         self.yLabel.setText('Napięcie [V]')
-        #self.plotWidget.clear()
 
     def measurement_clicked(self):
         self.data_function = self.measurement_plot
@@ -147,7 +150,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plotWidget.setLabel('bottom', 'Temperatura [K]', color='k')
         self.xLabel.setText('Temperatura [K]')
         self.yLabel.setText('Napięcie [V]')
-        #self.plotWidget.clear()
 
     def startButton_clicked(self):
         self.startButton.setEnabled(False)
@@ -182,7 +184,6 @@ class MainWindow(QtWidgets.QMainWindow):
             save_to.save_to_csv(path, parameters, self.x, self.y)
             self.csv_paths.append(path)
         except:
-            print("Error")
             self.error_message()
 
     def error_message(self):
@@ -194,11 +195,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.save_data()
 
     def critical_message(self, text):
-        msgBox = QtWidgets.QMessageBox()
-        msgBox.setIcon(QtWidgets.QMessageBox.Critical)
-        msgBox.setText(text)
-        msgBox.setWindowTitle("")
-        msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
+        QtWidgets.QMessageBox.critical(self, "Zamknij program", text, QtWidgets.QMessageBox.Ok)
 
 
 app = QtWidgets.QApplication(sys.argv)

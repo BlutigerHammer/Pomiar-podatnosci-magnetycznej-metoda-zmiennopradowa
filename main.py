@@ -8,24 +8,28 @@ import math
 class Aparature:
 
     def __init__(self):
+        self.sensivities = {1: '10nV', 2: '20nV', 3: '50nV', 4: '100nV', 5: '200nV', 6: '500nV', 7: '1uV', 8: '2uV',
+                            9: '5uV', 10: '10uV', 11: '20uV', 12: '50uV', 13: '100uV', 14: '200uV', 15: '500uV',
+                            16: '1mV', 17: '2mV', 18: '5mV', 19: '10V', 20: '20mV', 21: '50mV', 22: '100mV',
+                            23: '200mV', 24: '500mV'}
         errors = []
         try:
             rm = pyvisa.ResourceManager()
-            #print(rm.list_resources())
             self.thermometer = rm.open_resource('USB0::0x164E::0x0DAD::TW00020217::INSTR')
-        except Exception:
+        except pyvisa.VisaIOError:
             errors.append('Multimetr M3500A')
 
         try:
             com = find_com.find_device('USB Serial Port')
             self.voltmeter = serial.Serial(com, baudrate=9600, timeout=1)
-        except Exception:
+        except OSError:
             errors.append('Lock-in Amplifier SR510')
+
 
         try:
             com = find_com.find_device('CH340')
             self.arduino = serial.Serial(com, baudrate=9600, timeout=1)
-        except Exception:
+        except OSError:
             errors.append('Płytka Arduino')
 
         if errors:
@@ -33,9 +37,8 @@ class Aparature:
 
         else:
             time.sleep(2)
-            self.voltmeter.write(b'P -87 \r')
+            self.voltmeter.write(b'P -87 \r')  # set phase to 500uV
             self.voltmeter.write(b'G 15 \r')  # set sensivity to 500uV
-
 
     def sample_setting(self, position):
         if self.change_position(1, 1):
@@ -55,19 +58,15 @@ class Aparature:
 
     def measurement(self):
         temperature = self.thermometer.query("MEAS:VOLT:DC?")
-        temperature = volts_to_kelvins(float(temperature))
+        temperature = self.volts_to_kelvins(float(temperature))
         self.voltmeter.write(b' Q \r')
         voltage = self.voltmeter.readline().decode()
         voltage = float(voltage)
         return [temperature, voltage]
 
     def change_sensivity(self, voltage):
-        # if voltage == 0:
-        #     sensivity = 1
-        #     self.voltmeter.write(bytes(f"G {sensivity} \r", encoding='utf8'))
-        #     return sensivity
         order_of_magnitude = math.floor(math.log(voltage, 10))
-        sensivity = (order_of_magnitude + 8) * 3 + 1
+        sensivity = (order_of_magnitude + 9) * 3 + 1
         first_digit = voltage / 10 ** order_of_magnitude
         if first_digit < 1:
             sensivity += 0
@@ -79,7 +78,7 @@ class Aparature:
             sensivity += 3
         sensivity = min(sensivity, 24)
         self.voltmeter.write(bytes(f"G {sensivity} \r", encoding='utf8'))
-        return sensivities[sensivity]
+        return self.sensivities[sensivity]
 
     def change_position(self, direction, distance):
         data_to_arduino = str(direction) + str(distance) + '\n'
@@ -89,21 +88,15 @@ class Aparature:
             if len(distance_made) > 0:
                 return int(distance_made)
 
+    @staticmethod
+    def volts_to_kelvins(x):
+        x *= 1000  # volts to milivolts
+        x += 1  # Cold Junction Compensation
+        return 272.99294 + 25.83372 * x - 0.78202 * x ** 2 + 0.23669 * x ** 3 + 0.07095 * x ** 4 + 0.01113 * x ** 5
+
     def __del__(self):
         try:
             serial.Serial.close(self.voltmeter)
             self.thermometer.close()
         except AttributeError:
             print("AttributeError")
-
-
-
-sensivities = {1: '10nV', 2: '20nV', 3: '50nV', 4: '100nV', 5: '200nV', 6: '500nV', 7: '1uV', 8: '2uV', 9: '5uV',
-               10: '10uV', 11: '20uV', 12: '50uV', 13: '100uV', 14: '200uV', 15: '500uV', 16: '1mV', 17: '2mV',
-               18: '5mV', 19: '10V', 20: '20mV', 21: '50mV', 22: '100mV', 23: '200mV', 24: '500mV'}
-
-
-def volts_to_kelvins(x):
-    x *= 1000  # volts to milivolts
-    x += 1  # Cold Junction Compensation
-    return 272.99294 + 25.83372 * x - 0.78202 * x ** 2 + 0.23669 * x ** 3 + 0.07095 * x ** 4 + 0.01113 * x ** 5

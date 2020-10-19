@@ -13,7 +13,6 @@ def save_to_csv(path, parameters, x, y):
     df = pd.DataFrame({str1: x, str2: y})
     df.to_csv(path_or_buf=path, index=False, sep='\t', mode='a')
 
-
 def csv_to_xlsx(excel_path, csv_paths):
     writer = pd.ExcelWriter(excel_path, engine='xlsxwriter')
     for i in range(len(csv_paths)):
