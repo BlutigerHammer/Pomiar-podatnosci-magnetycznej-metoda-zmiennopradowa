@@ -25,4 +25,4 @@ Użyte technologie:
  - problemy z podłączeniem:
  ![bład](./images/error.jpg) 
  - tak wygląda zapisany plik w formacie .xlms:
- ![bład](./images/excel.png) 
+ ![excel](./images/excel.jpg) 
