@@ -1,7 +1,8 @@
 from PyQt5 import QtWidgets, QtCore, uic
+from PyQt5.QtWidgets import QInputDialog
 
 import sys
-from main import Aparature
+from Aparature import Aparature
 import save_to
 from time import sleep
 
@@ -41,6 +42,7 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception as errors:
             self.critical_message("Następujące urządzenia nie są podłączone poprawnie:\n" + str(errors)
                                   + "\nSprawdź połączenie USB i uruchom ponownie program")
+            self.closeEvent('error')
 
     def closeEvent(self, event):
         result = QtWidgets.QMessageBox.question(self, "Zamknij program",
@@ -72,8 +74,8 @@ class MainWindow(QtWidgets.QMainWindow):
         sleep(x*0.5)
         for position in range(MAX_POSITION):
             self.position = position
-            data = self.Meters.sample_setting(position)
             try:
+                data = self.Meters.sample_setting(position)
                 self.x.append(position)
                 self.y.append(data[1] - BACKGROUND)
                 self.data_line.setData(self.x, self.y)  # Update the data
@@ -95,8 +97,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.phase = - 80
         sleep(5)
         for phase in range(80, 100):
-            data = self.Meters.phase_setting(-phase)
             try:
+                data = self.Meters.phase_setting(-phase)
                 self.x.append(data[0])
                 self.y.append(data[1] - BACKGROUND)
                 self.data_line.setData(self.x, self.y)  # Update the data
@@ -113,8 +115,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stopButton_clicked()
 
     def measurement_plot(self):
-        data = self.Meters.measurement()
         try:
+            data = self.Meters.measurement()
             self.x.append(data[0])
             self.y.append(data[1] - BACKGROUND)
             self.data_line.setData(self.x, self.y)  # Update the data
@@ -150,6 +152,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plotWidget.setLabel('bottom', 'Temperatura [K]', color='k')
         self.xLabel.setText('Temperatura [K]')
         self.yLabel.setText('Napięcie [V]')
+        self.input_temperature_message()
 
     def startButton_clicked(self):
         self.startButton.setEnabled(False)
@@ -172,6 +175,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sampleSetting.setEnabled(True)
         self.phaseSetting.setEnabled(True)
 
+        self.Meters.thermometer.write("SYStem:LOCal")
         self.save_data()
         self.x = []
         self.y = []
@@ -196,6 +200,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def critical_message(self, text):
         QtWidgets.QMessageBox.critical(self, "Zamknij program", text, QtWidgets.QMessageBox.Ok)
+
+    def input_temperature_message(self):
+        temp, ok_pressed = QInputDialog.getDouble(self, "Welcome",
+                                                 "Program opened properly, please specify the temperature (in celsius):",
+                                                 20, 15, 30, 1)
+        if ok_pressed:
+            self.Meters.cold_junction_compesation = 0.04029*temp - 0.01591
 
 
 app = QtWidgets.QApplication(sys.argv)

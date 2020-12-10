@@ -12,6 +12,7 @@ class Aparature:
                             9: '5uV', 10: '10uV', 11: '20uV', 12: '50uV', 13: '100uV', 14: '200uV', 15: '500uV',
                             16: '1mV', 17: '2mV', 18: '5mV', 19: '10V', 20: '20mV', 21: '50mV', 22: '100mV',
                             23: '200mV', 24: '500mV'}
+        self.cold_junction_compesation = 0.87  # cold junction compesation for 20 deg Celsjus
         errors = []
         try:
             rm = pyvisa.ResourceManager()
@@ -37,8 +38,10 @@ class Aparature:
 
         else:
             time.sleep(2)
-            self.voltmeter.write(b'P -87 \r')  # set phase to 500uV
+            self.voltmeter.write(b'P -87 \r')  # set phase to -87
             self.voltmeter.write(b'G 15 \r')  # set sensivity to 500uV
+            self.voltmeter.write(b'T 1,6 \r')  # set pre time constant to 300ms
+            self.voltmeter.write(b'T 2,1 \r')  # set post time constant to 0.1ms
 
     def sample_setting(self, position):
         if self.change_position(1, 1):
@@ -66,7 +69,7 @@ class Aparature:
 
     def change_sensivity(self, voltage):
         order_of_magnitude = math.floor(math.log(voltage, 10))
-        sensivity = (order_of_magnitude + 9) * 3 + 1
+        sensivity = (order_of_magnitude + 8) * 3 + 1
         first_digit = voltage / 10 ** order_of_magnitude
         if first_digit < 1:
             sensivity += 0
@@ -88,10 +91,10 @@ class Aparature:
             if len(distance_made) > 0:
                 return int(distance_made)
 
-    @staticmethod
-    def volts_to_kelvins(x):
+
+    def volts_to_kelvins(self, x):
         x *= 1000  # volts to milivolts
-        x += 1  # Cold Junction Compensation
+        x += self.cold_junction_compesation
         return 272.99294 + 25.83372 * x - 0.78202 * x ** 2 + 0.23669 * x ** 3 + 0.07095 * x ** 4 + 0.01113 * x ** 5
 
     def __del__(self):

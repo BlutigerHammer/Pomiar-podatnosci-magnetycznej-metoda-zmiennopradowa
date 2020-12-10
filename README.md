@@ -8,11 +8,9 @@ Projekt obsługuje 3 urządzenia:
 - multimetr Picotest M3500A - pomiar temperatury za pomocą termopary Cu-konstantan
 
 Użyte technologie:
- - Python 3
+ - Python 3.7 (minimum - osobna wersja dla 3.4 pojawi się wktótce)
  - PyQt 5
- - sys
- - time
- - serial
+ - pyserial
  - pyvisa
  - pathlib
  - pandas
@@ -20,9 +18,13 @@ Użyte technologie:
  Wygląd programu:
  - pomiar (tu: próbka gadolinu):
  ![pomiar](./images/measurement.jpg) 
+ 
  - zapis do pliku:
  ![Zapis do pliku](./images/save.jpg) 
+ 
  - problemy z podłączeniem:
  ![bład](./images/error.jpg) 
+ 
  - tak wygląda zapisany plik w formacie .xlms:
+ 
  ![excel](./images/excel.jpg) 
