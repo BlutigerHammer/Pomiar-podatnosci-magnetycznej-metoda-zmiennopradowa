@@ -1,0 +1,5 @@
+import qdarkstyle
+
+self.plotWidget.setBackground((25, 35, 45))
+
+app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())

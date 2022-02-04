@@ -5,28 +5,31 @@ import find_com
 import math
 
 
-class Aparature:
+class Aparature: #może zmiana nazwy na MeasuringDevice
 
     def __init__(self):
+
         self.sensivities = {1: '10nV', 2: '20nV', 3: '50nV', 4: '100nV', 5: '200nV', 6: '500nV', 7: '1uV', 8: '2uV',
                             9: '5uV', 10: '10uV', 11: '20uV', 12: '50uV', 13: '100uV', 14: '200uV', 15: '500uV',
                             16: '1mV', 17: '2mV', 18: '5mV', 19: '10V', 20: '20mV', 21: '50mV', 22: '100mV',
-                            23: '200mV', 24: '500mV'}
-        self.cold_junction_compesation = 0.87  # cold junction compesation for 20 deg Celsjus
+                            23: '200mV', 24: '500mV'} #sensivities avaible in Lock in Ampilier
+        self.cold_junction_compesation = 0.87  # cold junction compesation for 20 deg Celsius
         errors = []
+        #try to connect with Multimetr M3500A
         try:
             rm = pyvisa.ResourceManager()
             self.thermometer = rm.open_resource('USB0::0x164E::0x0DAD::TW00020217::INSTR')
         except pyvisa.VisaIOError:
             errors.append('Multimetr M3500A')
 
+        # try to connect with Lock-in Amplifier SR510
         try:
             com = find_com.find_device('USB Serial Port')
             self.voltmeter = serial.Serial(com, baudrate=9600, timeout=1)
         except OSError:
             errors.append('Lock-in Amplifier SR510')
 
-
+        # try to connect with Arduino
         try:
             com = find_com.find_device('CH340')
             self.arduino = serial.Serial(com, baudrate=9600, timeout=1)
@@ -34,10 +37,10 @@ class Aparature:
             errors.append('Płytka Arduino')
 
         if errors:
-            raise Exception(f"{', '.join(errors)}")
+            raise Exception("-{}".format('\n-'.join(errors)))
 
         else:
-            time.sleep(2)
+            time.sleep(2) # have to wait because those devices need time to start up
             self.voltmeter.write(b'P -87 \r')  # set phase to -87
             self.voltmeter.write(b'G 15 \r')  # set sensivity to 500uV
             self.voltmeter.write(b'T 1,6 \r')  # set pre time constant to 300ms
@@ -91,7 +94,6 @@ class Aparature:
             if len(distance_made) > 0:
                 return int(distance_made)
 
-
     def volts_to_kelvins(self, x):
         x *= 1000  # volts to milivolts
         x += self.cold_junction_compesation
@@ -101,5 +103,6 @@ class Aparature:
         try:
             serial.Serial.close(self.voltmeter)
             self.thermometer.close()
+            self.arduino.close()
         except AttributeError:
             print("AttributeError")

@@ -1,22 +1,16 @@
 from PyQt5 import QtWidgets, QtCore, uic
-from PyQt5.QtWidgets import QInputDialog
 
-import sys
 from Aparature import Aparature
 import save_to
-from time import sleep
-
-BACKGROUND = 1.45e-5
-MAX_POSITION = 72
 
 
 class MainWindow(QtWidgets.QMainWindow):
-
+    from _logic import sample_setting_plot, phase_setting_plot, measurement_plot, save_data
+    from _messages import error_message, critical_message, input_temperature_message
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         uic.loadUi('gui-pl.ui', self)
         self.setWindowTitle('Pomiar podatnosci magnetycznej metodą zmiennopradową')
-
         self.x = []
         self.y = []
         self.csv_paths = []
@@ -69,63 +63,6 @@ class MainWindow(QtWidgets.QMainWindow):
             except AttributeError:
                 pass
 
-    def sample_setting_plot(self):
-        x = self.Meters.change_position(0, self.position)
-        sleep(x*0.5)
-        for position in range(MAX_POSITION):
-            self.position = position
-            try:
-                data = self.Meters.sample_setting(position)
-                self.x.append(position)
-                self.y.append(data[1] - BACKGROUND)
-                self.data_line.setData(self.x, self.y)  # Update the data
-                QtCore.QCoreApplication.sendPostedEvents()
-                self.xValue.setText(str(data[0]))
-                self.yValue.setText(str(data[1]))
-            except:
-                self.xValue.setText('ERROR')
-                self.yValue.setText('ERROR')
-        self.sensivity = self.Meters.change_sensivity(abs(max(self.y, key=abs)))
-        print('sesn:', self.sensivity)
-        self.position = self.x[self.y.index(max(self.y, key=abs))]
-        self.xValue.setText(str(self.position))
-        self.yValue.setText('')
-        self.Meters.change_position(0, MAX_POSITION - self.position)
-        self.stopButton_clicked()
-
-    def phase_setting_plot(self):
-        self.phase = - 80
-        sleep(5)
-        for phase in range(80, 100):
-            try:
-                data = self.Meters.phase_setting(-phase)
-                self.x.append(data[0])
-                self.y.append(data[1] - BACKGROUND)
-                self.data_line.setData(self.x, self.y)  # Update the data
-                QtCore.QCoreApplication.sendPostedEvents()
-                self.xValue.setText(str(data[0]))
-                self.yValue.setText(str(data[1]))
-            except:
-                self.xValue.setText('ERROR')
-                self.yValue.setText('ERROR')
-        self.phase = self.x[self.y.index(max(self.y, key=abs))]
-        self.xValue.setText(str(self.phase))
-        self.yValue.setText('')
-        self.Meters.voltmeter.write(bytes(f"P {self.phase} \r", encoding='utf8'))
-        self.stopButton_clicked()
-
-    def measurement_plot(self):
-        try:
-            data = self.Meters.measurement()
-            self.x.append(data[0])
-            self.y.append(data[1] - BACKGROUND)
-            self.data_line.setData(self.x, self.y)  # Update the data
-            self.xValue.setText(str(round(data[0], 1)))
-            self.yValue.setText(str(data[1]))
-        except:
-            self.xValue.setText('ERROR')
-            self.yValue.setText('ERROR')
-
     def sampleSetting_clicked(self):
         self.data_function = self.sample_setting_plot
         self.startButton.setEnabled(True)
@@ -166,7 +103,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timer.timeout.connect(self.data_function)
         self.timer.start()
 
-
     def stopButton_clicked(self):
         self.stopButton.setEnabled(False)
         self.timer.timeout.disconnect(self.data_function)
@@ -179,43 +115,3 @@ class MainWindow(QtWidgets.QMainWindow):
         self.save_data()
         self.x = []
         self.y = []
-
-    def save_data(self):
-        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "", "", "CSV Files (*.csv) ;;Text Files (*.txt)")
-        parameters = {'tło[V]': BACKGROUND, 'faza[°]': self.phase, 'położenie próbki': self.position,
-                      'czułość': self.sensivity, 'wartości x': self.xLabel.text(), 'wartości y': self.yLabel.text()}
-        try:
-            save_to.save_to_csv(path, parameters, self.x, self.y)
-            self.csv_paths.append(path)
-        except:
-            self.error_message()
-
-    def error_message(self):
-        msgBox = QtWidgets.QMessageBox()
-        msgBox.setIcon(QtWidgets.QMessageBox.Critical)
-        msgBox.setText("Nie udało się zapisać pliku, czy chcesz spróbować ponownie?")
-        msgBox.setWindowTitle("Błąd zapisu")
-        msgBox.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
-        self.save_data()
-
-    def critical_message(self, text):
-        QtWidgets.QMessageBox.critical(self, "Zamknij program", text, QtWidgets.QMessageBox.Ok)
-
-    def input_temperature_message(self):
-        temp, ok_pressed = QInputDialog.getDouble(self, "Welcome",
-                                                 "Program opened properly, please specify the temperature (in celsius):",
-                                                 20, 15, 30, 1)
-        if ok_pressed:
-            self.Meters.cold_junction_compesation = 0.04029*temp - 0.01591
-
-
-app = QtWidgets.QApplication(sys.argv)
-
-locale = QtCore.QLocale.system().name()
-qtTranslator = QtCore.QTranslator()
-if qtTranslator.load("qt_" + locale):
-    app.installTranslator(qtTranslator)
-
-w = MainWindow()
-w.show()
-sys.exit(app.exec_())
